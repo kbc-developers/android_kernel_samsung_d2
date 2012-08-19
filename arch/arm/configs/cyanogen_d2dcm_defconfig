@@ -1,6 +1,6 @@
 #
 # Automatically generated make config: don't edit
-# Linux/arm 3.0.39 Kernel Configuration
+# Linux/arm 3.0.41 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -437,6 +437,7 @@ CONFIG_MSM_QDSS_ETM_DEFAULT_ENABLE=y
 CONFIG_CLOCK_MAP=y
 CONFIG_MSM_SLEEP_STATS=y
 # CONFIG_MSM_SLEEP_STATS_DEVICE is not set
+CONFIG_MSM_RUN_QUEUE_STATS=y
 # CONFIG_MSM_STANDALONE_POWER_COLLAPSE is not set
 # CONFIG_MSM_GSBI9_UART is not set
 CONFIG_MSM_SHOW_RESUME_IRQ=y
