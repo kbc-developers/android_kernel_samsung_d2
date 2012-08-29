@@ -65,8 +65,8 @@ if [ "$BUILD_TARGET" = 'recovery' -o "$BUILD_TARGET" = 'r' ]; then
   INITRAMFS_TMP_DIR=/tmp/sc06d_recovery_ramdisk
   IMAGE_NAME=recovery
 else
-  INITRAMFS_SRC_DIR=../samsung_d2dcm_ramdisk
-  INITRAMFS_TMP_DIR=/tmp/samsung_d2dcm_ramdisk
+  INITRAMFS_SRC_DIR=../sc06d_boot_ramdisk
+  INITRAMFS_TMP_DIR=/tmp/sc06d_boot_ramdisk
   IMAGE_NAME=boot
 fi
 echo ""
