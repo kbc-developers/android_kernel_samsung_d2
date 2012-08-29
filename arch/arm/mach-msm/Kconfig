@@ -2275,6 +2275,11 @@ config SEC_PERIPHERAL_SECURE_CHK
 	help
 	  To check the authentication of peripheral image.
 
+config SEC_L1_DCACHE_PANIC_CHK
+	bool "L1 Dcache Panic check"
+	help
+	  To check the L1 Dcache Panic on MSM8960.
+
 config SEC_SSR_DEBUG_LEVEL_CHK
 	bool "SSR DEBUG LEVEL check"
 	help

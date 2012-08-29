@@ -162,6 +162,10 @@
 #ifdef CONFIG_SENSORS_CM36651
 #include <linux/i2c/cm36651.h>
 #endif
+#ifdef CONFIG_REGULATOR_MAX8952
+#include <linux/regulator/max8952.h>
+#include <linux/regulator/machine.h>
+#endif
 #ifdef CONFIG_VIBETONZ
 #include <linux/vibrator.h>
 #endif
@@ -989,8 +993,10 @@ static void __init locate_unstable_memory(void)
 	high = mb->start + mb->size;
 
 	/* Check if 32 bit overflow occured */
-	if (high < mb->start)
+	if (high < mb->start) {
 		high = ~0UL;
+		mb->size-= 1 << 12;
+	}
 
 	if (high < MAX_FIXED_AREA_SIZE + MSM8960_FIXED_AREA_START)
 		panic("fixed area extends beyond end of memory\n");
@@ -1328,6 +1334,7 @@ static void fsa9485_usb_cb(bool attached)
 	if (system_rev >= 0x01) {
 		if (attached) {
 			pr_info("%s set vbus state\n", __func__);
+
 			msm_otg_set_vbus_state(attached);
 		}
 	}
@@ -1477,6 +1484,13 @@ static void fsa9485_usb_cdp_cb(bool attached)
 
 	set_cable_status =
 		attached ? CABLE_TYPE_CDP : CABLE_TYPE_NONE;
+
+	if (system_rev >= 0x01) {
+		if (attached) {
+			pr_info("%s set vbus state\n", __func__);
+			msm_otg_set_vbus_state(attached);
+		}
+	}
 
 	for (i = 0; i < 10; i++) {
 		psy = power_supply_get_by_name("battery");
@@ -2057,7 +2071,7 @@ static struct cm36651_platform_data cm36651_pdata = {
 	.cm36651_led_on = cm36651_led_onoff,
 	.cm36651_power_on = cm36651_power_on,
 	.irq = PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_RGB_INT),
-	.threshold = 13,
+	.threshold = 15,
 };
 #endif
 static struct i2c_board_info opt_i2c_borad_info[] = {
@@ -4274,7 +4288,7 @@ static struct sec_jack_zone jack_zones[] = {
 		.jack_type	= SEC_HEADSET_3POLE,
 	},
 	[2] = {
-		.adc_high	= 1700,
+		.adc_high	= 1720,
 		.delay_ms	= 10,
 		.check_count	= 10,
 		.jack_type	= SEC_HEADSET_4POLE,
@@ -4828,6 +4842,43 @@ static struct i2c_board_info msm_camera_boardinfo[] __initdata = {
 };
 #endif
 
+/*Gopal: add for D2_DCM CAM_ISP_CORE power setting by MAX8952*/
+#ifdef CONFIG_REGULATOR_MAX8952
+static int max8952_is_used(void)
+{
+	if (system_rev >= 0x3)
+		return 1;
+	else
+		return 0;
+}
+
+static struct regulator_consumer_supply max8952_consumer =
+	REGULATOR_SUPPLY("cam_isp_core", NULL);
+
+static struct max8952_platform_data m2_dcm_max8952_pdata = {
+	.gpio_vid0	= -1, /* NOT controlled by GPIO, HW default high*/
+	.gpio_vid1	= -1, /* NOT controlled by GPIO, HW default high*/
+	.gpio_en	= CAM_CORE_EN, /*Controlled by GPIO, High enable */
+	.default_mode	= 3, /* vid0 = 1, vid1 = 1 */
+	.dvs_mode	= { 33, 33, 33, 43 }, /* 1.1V, 1.1V, 1.1V, 1.2V*/
+	.sync_freq	= 0, /* default: fastest */
+	.ramp_speed	= 0, /* default: fastest */
+	.reg_data	= {
+		.constraints	= {
+			.name		= "CAM_ISP_CORE",
+			.min_uV		= 770000,
+			.max_uV		= 1400000,
+			.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
+					  REGULATOR_CHANGE_STATUS,
+			.always_on	= 0,
+			.boot_on	= 0,
+		},
+		.num_consumer_supplies	= 1,
+		.consumer_supplies	= &max8952_consumer,
+	},
+};
+#endif /*CONFIG_REGULATOR_MAX8952*/
+
 #ifdef CONFIG_SAMSUNG_CMC624
 static struct i2c_board_info cmc624_i2c_borad_info[] = {
 	{
@@ -4835,6 +4886,19 @@ static struct i2c_board_info cmc624_i2c_borad_info[] = {
 	},
 };
 #endif
+
+#ifdef CONFIG_REGULATOR_MAX8952
+static struct i2c_board_info cmc624_max8952_i2c_borad_info[] = {
+	{
+		I2C_BOARD_INFO("cmc624", 0x38),
+	},
+
+	{
+		I2C_BOARD_INFO("max8952", 0xC0>>1),
+		.platform_data = &m2_dcm_max8952_pdata,
+	},
+};
+#endif /*CONFIG_REGULATOR_MAX8952*/
 
 /* Sensors DSPS platform data */
 #ifdef CONFIG_MSM_DSPS
@@ -5033,6 +5097,15 @@ static void __init register_i2c_devices(void)
 	u8 mach_mask = 0;
 	int i;
 
+#ifdef CONFIG_REGULATOR_MAX8952
+struct i2c_registry cmc624_max8952_i2c_devices = {
+		I2C_SURF | I2C_FFA | I2C_FLUID ,
+		MSM_CMC624_I2C_BUS_ID,
+		cmc624_max8952_i2c_borad_info,
+		ARRAY_SIZE(cmc624_max8952_i2c_borad_info),
+	};
+#endif /*CONFIG_REGULATOR_MAX8952*/
+
 #ifdef CONFIG_BATTERY_MAX17040
 	struct i2c_registry msm8960_fg_i2c_devices = {
 		I2C_SURF | I2C_FFA | I2C_FLUID,
@@ -5075,6 +5148,17 @@ static void __init register_i2c_devices(void)
 						msm8960_i2c_devices[i].info,
 						msm8960_i2c_devices[i].len);
 	}
+
+#ifdef CONFIG_SAMSUNG_CMC624
+#ifdef CONFIG_REGULATOR_MAX8952
+	if (max8952_is_used()) {
+		m2_dcm_max8952_pdata.gpio_en = gpio_rev(CAM_CORE_EN);
+		i2c_register_board_info(cmc624_max8952_i2c_devices.bus,
+					cmc624_max8952_i2c_devices.info,
+					cmc624_max8952_i2c_devices.len);
+	}
+#endif /*CONFIG_REGULATOR_MAX8952*/
+#endif /*CONFIG_SAMSUNG_CMC624*/
 
 #if defined(CONFIG_BATTERY_MAX17040)
 	if (!is_smb347_using()) {

@@ -246,6 +246,11 @@ static int force_error(const char *val, struct kernel_param *kp)
 	} else if (!strncmp(val, "undef", 5)) {
 		pr_emerg("Generating a undefined instruction exception!\n");
 		BUG();
+#ifdef CONFIG_SEC_L1_DCACHE_PANIC_CHK
+	} else if (!strncmp(val, "ldcache", 7)) {
+		pr_emerg("Generating a sec_l1_dcache_check_fail!\n");
+		sec_l1_dcache_check_fail();
+#endif
 	} else if (!strncmp(val, "bushang", 7)) {
 		void __iomem *p;
 		unsigned int val;
@@ -538,6 +543,25 @@ void sec_peripheral_secure_check_fail(void)
 }
 EXPORT_SYMBOL(sec_peripheral_secure_check_fail);
 #endif
+
+
+#ifdef CONFIG_SEC_L1_DCACHE_PANIC_CHK
+void sec_l1_dcache_check_fail(void)
+{
+	sec_debug_set_qc_dload_magic(0);
+	sec_debug_set_upload_magic(0x77665588);
+	pr_emerg("(%s) %s\n", __func__, sec_build_info);
+	pr_emerg("(%s) rebooting...\n", __func__);
+	flush_cache_all();
+	outer_flush_all();
+	arch_reset(0, "l1_dcache_reset");
+
+	while (1)
+		;
+}
+EXPORT_SYMBOL(sec_l1_dcache_check_fail);
+#endif
+
 
 
 #ifdef CONFIG_SEC_DEBUG_LOW_LOG

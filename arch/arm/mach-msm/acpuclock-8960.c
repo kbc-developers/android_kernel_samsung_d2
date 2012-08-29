@@ -36,7 +36,7 @@
 #include <mach/rpm-regulator.h>
 
 #include "acpuclock.h"
-#ifdef CONFIG_SEC_DEBUG_DCVS_LOG
+#if defined(CONFIG_SEC_DEBUG_DCVS_LOG) || defined(CONFIG_SEC_L1_DCACHE_PANIC_CHK)
 #include <mach/sec_debug.h>
 #endif
 #include "pm.h"
@@ -1587,6 +1587,22 @@ static void kraitv2_apply_vmin(struct acpu_level *tbl)
 			tbl->vdd_core = 1150000;
 }
 
+#ifdef CONFIG_SEC_L1_DCACHE_PANIC_CHK
+uint32_t global_sec_pvs_value;
+static int __init sec_pvs_setup(char *str)
+{
+	uint32_t sec_pvs_value = memparse(str, &str);
+
+	global_sec_pvs_value = sec_pvs_value;
+	pr_info("%s: global_sec_pvs_value=%x\n",
+			__func__, global_sec_pvs_value);
+
+	return 1;
+}
+
+__setup("sec_pvs=", sec_pvs_setup);
+#endif
+
 static struct acpu_level * __init select_freq_plan(void)
 {
 	struct acpu_level *l, *max_acpu_level = NULL;
@@ -1621,7 +1637,17 @@ static struct acpu_level * __init select_freq_plan(void)
 		case 0x3:
 			pr_alert("ACPU PVS: Fast\n");
 			v1 = acpu_freq_tbl_8960_kraitv1_nom_fast;
-			v2 = acpu_freq_tbl_8960_kraitv2_fast;
+#ifdef CONFIG_SEC_L1_DCACHE_PANIC_CHK
+				if (global_sec_pvs_value == 0xfafa) {
+					v2 = acpu_freq_tbl_8960_kraitv2_nom;
+					pr_alert("ACPU PVS: Fast-r\n");
+				} else {
+					v2 = acpu_freq_tbl_8960_kraitv2_fast;
+					pr_alert("ACPU PVS: Fast-o\n");
+				}
+#else
+				v2 = acpu_freq_tbl_8960_kraitv2_fast;
+#endif
 			boost_uv = BOOST_UV;
 			enable_boost = true;
 			break;

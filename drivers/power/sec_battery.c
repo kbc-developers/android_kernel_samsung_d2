@@ -750,8 +750,16 @@ static int sec_usb_get_property(struct power_supply *ps,
 		return -EINVAL;
 
 	/* Set enable=1 only if the USB charger is connected */
-	val->intval = (info->cable_type == CABLE_TYPE_USB);
+	//val->intval = (info->cable_type == CABLE_TYPE_USB);
+	if ((info->cable_type == CABLE_TYPE_USB) ||
+		(info->cable_type == CABLE_TYPE_CDP))
+		val->intval = 1;
+	else
+		val->intval = 0;	
 
+	pr_debug("%s : cable type = %d, val->intval = %d\n",
+		__func__, info->cable_type, val->intval);
+		
 	return 0;
 }
 
