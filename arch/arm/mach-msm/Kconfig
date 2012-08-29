@@ -1481,6 +1481,10 @@ config MSM_DALRPC_TEST
 	help
 	  Exercises DAL RPC calls to QDSP6.
 
+config CPU_VOLTAGE_TABLE
+	bool "Enable CPU Voltage Table via sysfs for adjustements"
+	default n
+
 if CPU_FREQ_MSM
 
 config MSM_CPU_FREQ_SET_MIN_MAX
@@ -2298,5 +2302,19 @@ config MSM_DCVS
 	  The DCVS manager allows idle driver to feed the idle information to the
 	  algorithm and the algorithm returns a frequency for the core which is
 	  passed to the frequency change driver.
+
+config MSM_USE_UNDERCLOCK
+	bool "Use CPU Under Frequency"
+	default n
+
+config MSM_USE_OVERCLOCK
+	bool "Use CPU Over Frequency"
+	default n
+
+config GPU_OVERCLOCK
+	bool "Enable GPU Overclocking option"
+	default n
+	help
+	  Adreno2xx overclocking
 
 endif
